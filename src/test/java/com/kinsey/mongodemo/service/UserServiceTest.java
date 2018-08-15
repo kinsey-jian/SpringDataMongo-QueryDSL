@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +25,7 @@ public class UserServiceTest {
 
     @Before
     public void before() throws Exception {
-        List<User> list = new ArrayList<>();
+        /*List<User> list = new ArrayList<>();
         for(int i = 0; i<10000; i++){
             User user = new User();
             user.setAge(10+i%10);
@@ -39,7 +41,7 @@ public class UserServiceTest {
             user.setAddress(address);
             list.add(user);
         }
-        userRepository.saveAll(list);
+        userRepository.saveAll(list);*/
     }
 
 
@@ -62,5 +64,11 @@ public class UserServiceTest {
     public void testTestDbrefFindOne() throws Exception {
     }
 
+    @Test
+    public void testQuery() {
+        Instant s = Instant.now();
+        long users = userRepository.countByAge(10);
+        System.out.println(Duration.between(s,Instant.now()).toMillis());
+    }
 
 } 

@@ -143,7 +143,7 @@ public class CascadeCallback implements ReflectionUtils.FieldCallback {
 User document 和 Address document, 要实现级联保存加上`@DBRef @CascadeSave`注解即可
 @CreatedDate @LastModifiedDate 只要在Application上加上`@EnableMongoAuditing`即可，
 @CreatedBy @LastModifiedBy 继承AuditorAware 重写getCurrentAuditor，跟Jpa一样
-```
+``` java
 @Getter
 @Setter
 @Document
@@ -215,12 +215,36 @@ public class UserAuditor implements AuditorAware<String> {
     }
 }
 ```
-Repository很简单，继承`QuerydslPredicateExecutor<T>`即可
-```
+Repository很简单，继承`QuerydslPredicateExecutor<T>`即可，可以像jpa一样写些简单的查询
+``` java
 @Repository
 public interface UserRepository extends MongoRepository<User, String>, QuerydslPredicateExecutor<User> {
-    User findByAddress_DetailAddress(String address);
+      List<User> findByAgeBetween(int s, int e);
+      long countByAge(int age);
 }
+```
+动态查询，同样可以采用QueryDSL core 的`BooleanBuilder`来实现，跟我们原来的写法一样
+``` java
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class PersonFilter {
+
+    private String search;
+
+    public BooleanBuilder toExpression() {
+        BooleanBuilder builder = new BooleanBuilder();
+        QUser user = QUser.user;
+        if(!StringUtils.isEmpty(search)){
+            builder.and(user.email.contains(search).or(user.tel.contains(search)));
+        }
+        return builder;
+    }
+}
+
+Page<User> page = userRepository.findAll(filter.toExpression(), pageable);
 ```
 ### MongoDB索引
 #### Spring Data MongoDB 创建索引
@@ -238,14 +262,13 @@ public interface UserRepository extends MongoRepository<User, String>, QuerydslP
 #### 复合索引
 1. 在多个键上建立的索引就是复合索引，有时候我们的查询不是单条件的，可能是多条件，比如查找年龄在10-20名字叫‘Tom’的用户，那么我们可以建立“age”和“name”  的联合索引来加速查询
 2. 先插入100万条数据，然后创建三个索引
-
 ```
 db.user.ensureIndex({"age":1});
 db.user.ensureIndex({"name":1,"age":1});
 db.user.ensureIndex({"age":1,"name":1});
 ``` 
  - 使用hint()强制走指定的索引，explain("executionStats")查看执行计划,json太长，筛选出重点
-``` json
+```
 db.user.find({"age":{"$gte":10,"$lte":12},"name":"Tom1"}).hint({"age":1}).explain("executionStats");
 ...
 "executionStats" : {
