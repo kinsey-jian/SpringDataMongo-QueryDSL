@@ -1,0 +1,12 @@
+server:
+  port: 9321
+spring:
+  data:
+    mongodb:
+      uri: mongodb://test:123456@localhost:27017/test
+
+logging.level.org:
+    springframework:
+        web: INFO
+        mongodb: info
+
