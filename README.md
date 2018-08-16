@@ -246,6 +246,70 @@ public class PersonFilter {
 
 Page<User> page = userRepository.findAll(filter.toExpression(), pageable);
 ```
+很多时候我们需要进行分组查询，分组查询我们利用`Aggregation`来做，尽管还是有点麻烦
+ - Aggregation.match()方法作为分组查询条件Criteria.where()里面写字段名称,条件必须是group后得到的数据中的
+ - Aggregation.group()分组内容，sum,count,max,min,avg等等一些基本的函数，first是去第一个值 必须取别名(as)
+ - Aggregation.project()是接收字段，接收的model的属性，project("age").andExpression("字段名*[0]", 10).as("source")
+   `andExpression`可以实现自定义函数 group后的字段 可以做四则远算
+ - 然后利用mongoTemplate.aggregate(aggregation, 查询的document, 返回的model)
+``` java
+//条件
+MatchOperation matchOperation = Aggregation.match(Criteria.where("createDate").gte(LocalDateTime.of(2018, 8, 1, 0, 0)).lte(LocalDateTime.now()));
+//排序
+SortOperation sortOperation = Aggregation.sort(Sort.Direction.DESC, "age");
+//分组
+GroupOperation groupOperation = Aggregation.group("age").count().as("count").first("age").as("age").first("createDate").as("createDate");
+//接收字段
+ProjectionOperation projectionOperation = project("age", "count", "createDate");
+
+Aggregation aggregation = Aggregation.newAggregation(matchOperation, groupOperation, projectionOperation, sortOperation);
+List<StatisticsModel> results = mongoTemplate.aggregate(aggregation, User.class, StatisticsModel.class).getMappedResults();
+```
+#### DBRef 和 内嵌
+关于我们在设计document时候，什么情况下采用内嵌，什么情况下采用DBRef呢
+从对象的角度看
+mongodb 单个document限制大小为16m，所以内嵌的数组不能过大
+1. 采用内嵌的情况
+  - 如果是线性细节对象，优先考虑内嵌
+  - 一个对象对另外一个对象是包含关系，采用内嵌
+  - 几个简单的对象，可以单独作为一个collection
+  - 性能关系，内嵌性能最好
+2. 采用引用的情况
+ - 当内嵌的数组存在无限增长（或者很大1000以上），这种存在超过16m的限制，采用引用的方式，在多的一方记录一的一方
+ - 当一个对象需要单独来处理的时候
+从DDD的角度来看
+我的个人理解对aggregate的理解是
+ - 聚合作为一种边界，主要用于维护业务完整性，此时应遵循业务规则中定义的不变量
+ - 作为聚合边界内的非聚合根实体对象，若可能被别的调用者单独调用，则应该作为单独的聚合分离出来
+ - 在聚合边界内的非聚合根对象，与聚合根之间应该存在直接或间接的引用关系，且可以通过对象的引用方式；若必须采用Id来引用，则说明被引用的对象不属于该聚合
+ - 若一个对象缺少另一个对象作为其主对象就不可能存在，则该对象一定属于该主对象的聚合边界内
+ - 若一个实体对象，可能被多个聚合引用，则该实体对象应首先考虑作为单独的聚合
+ 
+例如：账单与保证金，账单与保证金没有强约束性关系，账单可以没有保证金，保证金可以单独出来查询，所以两者是两个aggregate
+    如果账单脱离BillOrigin，那么账单就没有意义了，至少要知道账单是那个对象账单
+1. 下面是内嵌和DBRef性能测试
+* 插入100万条数据
+ - - - - - - - - - - - - - - -
+ 内嵌 225114ms 229159ms 233977ms
+ 
+ DBRef 631095ms 648557ms
+* 查询100万条数据
+ - - - - - - - - - - - - - - -
+内嵌 18528ms 19874ms 18891ms
+
+DBRef 410950ms
+* 分页查询100条数据
+ - - - - - - - - - - - - - - -
+内嵌 108ms 107ms 102ms
+
+DBRef 252ms 240ms 257ms
+* 查询一条数据
+ - - - - - - - - - - - - - - -
+内嵌 64ms 59ms 60ms
+
+DBRef 70ms 62ms 71ms
+  
+
 ### MongoDB索引
 #### Spring Data MongoDB 创建索引
 1. 在相应的property上加上@Indexed注解就可以创建索引

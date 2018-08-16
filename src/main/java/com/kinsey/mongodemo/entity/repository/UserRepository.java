@@ -15,4 +15,6 @@ public interface UserRepository extends MongoRepository<User, String>, QuerydslP
     List<User> findByAgeBetween(int s, int e);
 
     long countByAge(int age);
+
+    List<User> findByAddress_DetailAddress(String address);
 }

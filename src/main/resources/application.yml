@@ -7,6 +7,4 @@ spring:
 
 logging.level.org:
     springframework:
-        web: INFO
-        mongodb: info
-
+        data.mongodb.core.MongoTemplate: debug
