@@ -11,8 +11,6 @@ import lombok.AllArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 /**
  * Created by zj on 2018/8/6
  */
@@ -42,24 +40,9 @@ public class UserController {
         return userService.findById(id);
     }
 
-    @GetMapping("/group")
-    public void queryGroup(){
-        userService.queryGroupByAge();
-        userService.queryGroupByAgeCountSource();
+    @DeleteMapping()
+    public void deleteAll(){
+        userService.deleteAll();
     }
 
-    @GetMapping("/test")
-    public void test(){
-        userService.testDBref();
-    }
-
-    @GetMapping("/dbref-query")
-    public List<User> testQuery(){
-        return userService.testDbrefQuery();
-    }
-
-    @GetMapping("/dbref-query-one")
-    public User testQueryOne(){
-        return userService.testDbrefFindOne();
-    }
 }

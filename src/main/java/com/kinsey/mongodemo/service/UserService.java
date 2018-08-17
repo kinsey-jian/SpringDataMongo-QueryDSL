@@ -17,10 +17,7 @@ import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -53,6 +50,10 @@ public class UserService {
     public PersonModel findById(String id) {
         Optional<User> userOptional = userRepository.findById(id);
         return userOptional.map(PersonModel::new).orElse(null);
+    }
+
+    public void deleteAll(){
+        userRepository.deleteAll();
     }
 
     /**
@@ -91,52 +92,4 @@ public class UserService {
         System.out.println(results);
     }
 
-
-    /**
-     * 159502 ms
-     */
-    public void testDBref(){
-
-        Instant s = Instant.now();
-        List<User> list = new ArrayList<>();
-        for(int i = 0; i<1000000; i++){
-            User user = new User();
-            user.setAge(10);
-            user.setEmail("12344");
-            user.setName("sfdgffdg");
-            user.setTel("1273824");
-            user.setSource(89);
-            Address address = new Address();
-            address.setArea("sadsf");
-            address.setCity("sadsd");
-            address.setDetailAddress("juer");
-            address.setProvince("hsdjhaseuw");
-            user.setAddress(address);
-            list.add(user);
-        }
-        userRepository.saveAll(list);
-        Instant now = Instant.now();
-        System.err.println(Duration.between(s,now).toMillis());
-
-    }
-
-    /**
-     * 349922 ms
-     * @return
-     */
-    public List<User> testDbrefQuery(){
-        Instant s = Instant.now();
-        List<User> all = userRepository.findAll();
-        Instant now = Instant.now();
-        System.err.println(Duration.between(s,now).toMillis());
-        return all;
-    }
-
-    public User testDbrefFindOne(){
-        Instant s = Instant.now();
-        Optional<User> all = userRepository.findById("");
-        Instant now = Instant.now();
-        System.err.println(Duration.between(s,now).toMillis());
-        return all.get();
-    }
 }

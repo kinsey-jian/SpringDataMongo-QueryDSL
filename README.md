@@ -89,8 +89,9 @@ spring:
 public @interface CascadeSave {
 }
 ```
-注解的处理，重写`AbstractMongoEventListener`的`onBeforeConvert`方法，利用Spring返回工具类`ReflectionUtils.FieldCallback`，
-重写doWith方法，在doWith方法里面找这个Field上是否有对应的注解(CascadeSave和DBRef)，然后`mongoOperations`进行持久化，只需在启动注入`CascadeSaveMongoEventListener`即可
+注解的处理，重写`AbstractMongoEventListener`的`onBeforeConvert`方法，
+利用Spring返回工具类`ReflectionUtils.FieldCallback`，重写doWith方法，
+在doWith方法里面找这个Field上是否有对应的注解(CascadeSave和DBRef)，然后`mongoOperations`进行持久化，只需在启动注入`CascadeSaveMongoEventListener`即可
 ``` Java
 public class CascadeSaveMongoEventListener extends AbstractMongoEventListener<Object> {
 
@@ -277,6 +278,7 @@ mongodb 单个document限制大小为16m，所以内嵌的数组不能过大
 2. 采用引用的情况
  - 当内嵌的数组存在无限增长（或者很大1000以上），这种存在超过16m的限制，采用引用的方式，在多的一方记录一的一方
  - 当一个对象需要单独来处理的时候
+ 
 从DDD的角度来看
 我的个人理解对aggregate的理解是
  - 聚合作为一种边界，主要用于维护业务完整性，此时应遵循业务规则中定义的不变量
@@ -286,30 +288,37 @@ mongodb 单个document限制大小为16m，所以内嵌的数组不能过大
  - 若一个实体对象，可能被多个聚合引用，则该实体对象应首先考虑作为单独的聚合
  
 例如：账单与保证金，账单与保证金没有强约束性关系，账单可以没有保证金，保证金可以单独出来查询，所以两者是两个aggregate
-    如果账单脱离BillOrigin，那么账单就没有意义了，至少要知道账单是那个对象账单
+    如果账单脱离BillOrigin，那么账单就没有意义了，至少要知道账单是那个对象账单，当然设计的时候也可以考虑部分不经常变更的数据冗余内嵌
 1. 下面是内嵌和DBRef性能测试
 * 插入100万条数据
- - - - - - - - - - - - - - - -
+
  内嵌 225114ms 229159ms 233977ms
  
  DBRef 631095ms 648557ms
 * 查询100万条数据
- - - - - - - - - - - - - - - -
+
 内嵌 18528ms 19874ms 18891ms
 
 DBRef 410950ms
 * 分页查询100条数据
- - - - - - - - - - - - - - - -
+
 内嵌 108ms 107ms 102ms
 
 DBRef 252ms 240ms 257ms
 * 查询一条数据
- - - - - - - - - - - - - - - -
+
 内嵌 64ms 59ms 60ms
 
 DBRef 70ms 62ms 71ms
-  
 
+以上基于本地测试的数据，内嵌的性能在数据量比较大的时候有很大的优势
+而且内嵌可以实现对内嵌数组进行查询，可以建立数组内的索引，而引用关联则不可以
+ ``` java
+ List<User> findByAddress_DetailAddress(String address);
+ 
+ QUser user = QUser.user;
+ userRepository.findAll(user.address.detailAddress.eq("科技大厦"));
+ ```
 ### MongoDB索引
 #### Spring Data MongoDB 创建索引
 1. 在相应的property上加上@Indexed注解就可以创建索引
@@ -412,7 +421,7 @@ db.user.find({"age":{"$gte":12.0,"$lte":15.0}}).sort({"name":1}).limit(100).hint
     "totalKeysExamined" : 200100.0, 
     "totalDocsExamined" : 200100.0, 
 ```
- - 由此可见走索引条件 query条件或者sort里面必须有 name的查询条件
+ - 由此可见走索引条件 query条件或者sort里面必须有 name的查询条件,find()内的顺序无关
  - 多个索引上排序问题 {'name' : 1, 'age': 1} 可以支持的排序是 {'name' : 1, 'age': 1} 和 {'name' : -1, 'age': -1}，但是不支持{'age' : 1, 'name': 1} 和
 {'name' : 1, 'age': -1}; 所以排序key的顺序必须和它们在索引中的排列顺序一致，必须和索引中的对应key的排序顺序 完全相同,或者完全相反
  - 复合索引中还有一种情况 有对一个键排序并只要有限个结果的情景 基于排序键的索引，效果比较好
@@ -424,4 +433,29 @@ db.user.find({"age":{"$gte":12.0,"$lte":15.0}}).sort({"name":1}).limit(100).hint
 TTL索引在索引字段值的时间经过特定秒数的时间之后，TTL索引会将文档进行过期操作，如果该字段是一个数组，并且在索引中有多个数据值，MongoDB使用数组中的最低（例如，最早的）日期值来计算过期阈值。
  - TTL索引无法保证过期数据会在过期之后马上被删除。在文档过期时间和MongoDB从数据库中删除文档之间可能会有一段时间的延迟。
    删除过期文档的后台进程每60秒运行一次。因此，文档在文档的过期时间段和后台任务运行的时间段之间可能还会保存在集合中。
+
+#### 稀疏索引
+在异构数据文档中，稀疏索引发挥很大的作用，只包含有索引字段的文档的条目，即使索引字段包含一个空值。也就是稀疏索引可以跳过那些索引键不存在的文档。
+这样的好处就是在不造成索引空间浪费的前提下提高检索效率，节省了空间提高了效率
+创建稀疏索引 db.user.createIndex({ source: 1 } , { sparse: true })
+```
+# 创建异构数据
+db.user.insertMany([
+    { "_id" : ObjectId("523b6e32fb408eea0eec2647"), "name" : "tom" },
+    { "_id" : ObjectId("523b6e61fb408eea0eec2648"), "name" : "king", "age" : 12 },
+    { "_id" : ObjectId("523b6e6ffb408eea0eec2649"), "name" : "nina", "age" : 18 }
+    ])
+db.user.createIndex({ age: 1 } , { sparse: true });
+# 查询age
+db.user.find({"age":{$lt:30}}).explain("executionStats") //走索引
+# 返回结果，只返回含有age的数据
+{ "_id" : ObjectId("523b6e61fb408eea0eec2648"), "name" : "king", "age" : 12 },
+{ "_id" : ObjectId("523b6e6ffb408eea0eec2649"), "name" : "nina", "age" : 18 }
+# 没有查询条件，仅排序
+db.user.find().sort({"age":1}).explain("executionStats") //不走索引
+# 返回结果发现全部返回，并没有走索引
+{ "_id" : ObjectId("523b6e32fb408eea0eec2647"), "name" : "tom" },
+{ "_id" : ObjectId("523b6e61fb408eea0eec2648"), "name" : "king", "age" : 12 },
+{ "_id" : ObjectId("523b6e6ffb408eea0eec2649"), "name" : "nina", "age" : 18 }
+```
                                           
