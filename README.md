@@ -267,6 +267,7 @@ ProjectionOperation projectionOperation = project("age", "count", "createDate");
 Aggregation aggregation = Aggregation.newAggregation(matchOperation, groupOperation, projectionOperation, sortOperation);
 List<StatisticsModel> results = mongoTemplate.aggregate(aggregation, User.class, StatisticsModel.class).getMappedResults();
 ```
+
 #### DBRef 和 内嵌
 关于我们在设计document时候，什么情况下采用内嵌，什么情况下采用DBRef呢
 从对象的角度看
@@ -314,12 +315,13 @@ DBRef 70ms 62ms 71ms
 
 以上基于本地测试的数据，内嵌的性能在数据量比较大的时候有很大的优势
 而且内嵌可以实现对内嵌数组进行查询，可以建立数组内的索引，而引用关联则不可以
- ``` java
+``` java
  List<User> findByAddress_DetailAddress(String address);
  
  QUser user = QUser.user;
  userRepository.findAll(user.address.detailAddress.eq("科技大厦"));
- ```
+```
+
 ### MongoDB索引
 #### Spring Data MongoDB 创建索引
 1. 在相应的property上加上@Indexed注解就可以创建索引
@@ -340,8 +342,10 @@ DBRef 70ms 62ms 71ms
 db.user.ensureIndex({"age":1});
 db.user.ensureIndex({"name":1,"age":1});
 db.user.ensureIndex({"age":1,"name":1});
-``` 
+```
+
  - 使用hint()强制走指定的索引，explain("executionStats")查看执行计划,json太长，筛选出重点
+ 
 ```
 db.user.find({"age":{"$gte":10,"$lte":12},"name":"Tom1"}).hint({"age":1}).explain("executionStats");
 ...
@@ -381,6 +385,7 @@ db.user.find({"age":{"$gte":10,"$lte":12},"name":"Tom1"}).hint({"age":1,"name":1
                 "executionTimeMillisEstimate" : 52.0, 
             ...
 ```
+
 可见复合索引能够大幅度提高查询速度，所以多条件查询下，应正确的使用复合索引
 
 1. 删除原来的索引，创建 name age source 组合索引
@@ -439,6 +444,7 @@ TTL索引在索引字段值的时间经过特定秒数的时间之后，TTL索�
 在异构数据文档中，稀疏索引发挥很大的作用，只包含有索引字段的文档的条目，即使索引字段包含一个空值。也就是稀疏索引可以跳过那些索引键不存在的文档。
 这样的好处就是在不造成索引空间浪费的前提下提高检索效率，节省了空间提高了效率
 创建稀疏索引 db.user.createIndex({ source: 1 } , { sparse: true })
+
 ```
 # 创建异构数据
 db.user.insertMany([
