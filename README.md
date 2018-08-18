@@ -390,6 +390,7 @@ db.user.find({"age":{"$gte":10,"$lte":12},"name":"Tom1"}).hint({"age":1,"name":1
 可见复合索引能够大幅度提高查询速度，所以多条件查询下，应正确的使用复合索引
 
 1. 删除原来的索引，创建 name age source 组合索引
+
 ``` sql
 //1
 db.user.dropIndexes();
