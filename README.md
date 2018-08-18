@@ -254,7 +254,7 @@ Page<User> page = userRepository.findAll(filter.toExpression(), pageable);
  - Aggregation.project()是接收字段，接收的model的属性，project("age").andExpression("字段名*[0]", 10).as("source")
    `andExpression`可以实现自定义函数 group后的字段 可以做四则远算
  - 然后利用mongoTemplate.aggregate(aggregation, 查询的document, 返回的model)
-``` java
+```
 //条件
 MatchOperation matchOperation = Aggregation.match(Criteria.where("createDate").gte(LocalDateTime.of(2018, 8, 1, 0, 0)).lte(LocalDateTime.now()));
 //排序
@@ -390,7 +390,7 @@ db.user.find({"age":{"$gte":10,"$lte":12},"name":"Tom1"}).hint({"age":1,"name":1
 
 1. 删除原来的索引，创建 name age source 组合索引
 ```
-# 1
+//1
 db.user.dropIndexes();
 db.user.ensureIndex({'name':1,'age':1,'source':1})
 
@@ -407,7 +407,7 @@ db.user.find().sort({"name":1,"age":1}).explain("executionStats"); //走索引
 db.user.find().sort({"age":1,"name":1}).explain("executionStats"); //不走索引
 db.user.find().sort({"name":1,"age":-1}).explain("executionStats"); //走索引
 
-# 2
+//2
 db.user.dropIndexes();
 db.user.ensureIndex({"name":1,"age":1});
 db.user.ensureIndex({"age":1,"name":1});
