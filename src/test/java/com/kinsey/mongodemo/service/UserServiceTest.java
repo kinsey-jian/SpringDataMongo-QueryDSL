@@ -37,7 +37,7 @@ public class UserServiceTest {
     public void testSave1() throws Exception {
         Instant s = Instant.now();
         List<User> list = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 1000000; i++) {
             User user = new User();
             user.setAge(10 + i % 10);
             user.setEmail("888888@ku.com");
@@ -128,7 +128,7 @@ public class UserServiceTest {
         Instant s = Instant.now();
         QUser user = QUser.user;
         QAddress address = QAddress.address;
-        Iterable<User> 科技大厦 = userRepository.findAll(user.address.detailAddress.eq("科技大厦"));
+        Iterable<User> users = userRepository.findAll(user.address.detailAddress.eq("科技大厦"));
         //List<User> users = userRepository.findByAddress_DetailAddress("科技大厦");
         System.out.println(Duration.between(s, Instant.now()).toMillis());
     }

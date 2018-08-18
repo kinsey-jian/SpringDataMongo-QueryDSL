@@ -37,7 +37,7 @@ public class UserService {
     private final MongoTemplate mongoTemplate;
 
     public void createPerson(User person) {
-        userRepository.save(person);
+        userRepository.insert(person);
     }
 
     public PageVO<PersonModel> list(Pageable pageable, PersonFilter filter) {
