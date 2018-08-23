@@ -330,6 +330,7 @@ mongodb 单个document限制大小为16m，所以内嵌的数组不能过大
     | 43ms        | 47ms          |   68ms       |
 以上基于本地测试的数据，内嵌的性能在数据量比较大的时候有很大的优势
 而且内嵌可以实现对内嵌数组进行查询，可以建立数组内的索引，而引用关联则不可以
+
 ``` java
  List<User> findByAddress_DetailAddress(String address);
  
@@ -340,6 +341,7 @@ mongodb 单个document限制大小为16m，所以内嵌的数组不能过大
 ### MongoDB数据迁移
 我们在使用MySQL的时候，数据迁移脚本使用flyway在项目启动的时候来完成迁移，而在MongoDB中我们使用Mongobee来项目启动时完成数据迁移
 pom文件中加入相关的依赖
+
 ``` pom
 <dependency>
     <groupId>com.github.mongobee</groupId>
