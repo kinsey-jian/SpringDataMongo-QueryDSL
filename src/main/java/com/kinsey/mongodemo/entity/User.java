@@ -15,6 +15,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Created by zj on 2018/8/6
@@ -60,4 +61,6 @@ public class User implements Serializable {
 
     @LastModifiedBy
     private String lastModifiedUser;
+
+    private List<String> action;
 }

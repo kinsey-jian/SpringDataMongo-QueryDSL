@@ -1,4 +1,11 @@
 ### MongoDB相关
+ 1. MongoDB是一个面向文档的数据库，它并不是关系型数据库，直接存取BSON，这意味着MongoDB更加灵活，因为可以在文档中直接插入数组之类的复杂数据类型，所以没必要遵守关系型数据库的三大范式，
+传统的三大范式导致为了满足一个数据的查询，需要多张表的join，每张表都对应着磁盘一次读取，这和数据放在一个collection里面一次性读取完全不一样的。
+ 2. 在扩展性上，应用数据快速增长，关系型数据库通过分库分表会带来繁重的工作量和技术复杂度，而在MongoDB有非常有效的，现成的解决方案。通过自带的Mongos集群，只需要在适当的时候继续添加Mongo分片，
+ 就可以实现程序段自动水平扩展和路由，一方面缓解单个节点的读写压力，另外一方面可有效地均衡磁盘容量的使用情况。整个mongos集群对应用层完全透明，并可完美地做到各个Mongos集群组件的高可用性。
+ 3. 在我们使用ES CQRS后 view层使用MongoDB将会更加高效的进行数据查询，统计分析等
+
+本文内容包含MongoDB与QueryDSL的整合，document采用DBREf和内嵌以及MySQL性能对比（本机测试），MongoDB数据迁移 以及MongoDB索引和执行计划等
 #### MongoDB 与 QueryDSL整合
 pom文件
 ``` pom
@@ -295,25 +302,32 @@ mongodb 单个document限制大小为16m，所以内嵌的数组不能过大
 1. 下面是内嵌和DBRef性能测试
 * 插入100万条数据
 
- 内嵌 225114ms 229159ms 233977ms
- 
- DBRef 631095ms 648557ms
+    |    内嵌      |     DBRef     |    MySQL     |
+    | :----------:| :-----------: | :----------: |
+    | 225114ms    | 631095ms      |   940519ms   |
+    | 229159ms    | 648557ms      |   952588ms   |
+    | 233977ms    | $1      |   7   |
 * 查询100万条数据
 
-内嵌 18528ms 19874ms 18891ms
-
-DBRef 410950ms
+    |    内嵌    |  DBRef    |    MySQL   |
+    | :--------:| :-------: | :--------: |
+    | 18528ms    | 410950ms |   465746ms |
+    | 19874ms    | 412671ms |   492935ms |
+    | 19874ms    | $1      |    476925ms |
 * 分页查询100条数据
 
-内嵌 108ms 107ms 102ms
-
-DBRef 252ms 240ms 257ms
+    |    内嵌   |  DBRef  |    MySQL |
+    | :-------:| :------:| :-------:|
+    | 108ms    | 252ms   |   479ms  |
+    | 107ms    | 240ms   |   493ms  |
+    | 102ms    | 257ms   |   541ms  |
 * 查询一条数据
 
-内嵌 64ms 59ms 60ms
-
-DBRef 70ms 62ms 71ms
-
+    |  内嵌  | DBRef  |  MySQL  |
+    | :-----:| :-----:| :------:|
+    | 64ms   | 70ms   |   71ms  |
+    | 59ms   | 62ms   |   64ms  |
+    | 60ms   | 71ms   |   68ms  |
 以上基于本地测试的数据，内嵌的性能在数据量比较大的时候有很大的优势
 而且内嵌可以实现对内嵌数组进行查询，可以建立数组内的索引，而引用关联则不可以
 ``` java
@@ -322,6 +336,127 @@ DBRef 70ms 62ms 71ms
  QUser user = QUser.user;
  userRepository.findAll(user.address.detailAddress.eq("科技大厦"));
 ```
+
+### MongoDB数据迁移
+我们在使用MySQL的时候，数据迁移脚本使用flyway在项目启动的时候来完成迁移，而在MongoDB中我们使用Mongobee来项目启动时完成数据迁移
+pom文件中加入相关的依赖
+``` pom
+<dependency>
+    <groupId>com.github.mongobee</groupId>
+    <artifactId>mongobee</artifactId>
+    <version>0.13</version>
+    <exclusions>
+        <exclusion>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongo-java-driver</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+``` 
+添加config
+``` java
+@Configuration
+@EnableConfigurationProperties(MongoProperties.class)
+public class MongobeeConfig {
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
+    @Autowired
+    private MongoProperties properties;
+
+    @Bean
+    public Mongobee mongobee() {
+        Mongobee mongobee = new Mongobee(properties.getUri());
+        mongobee.setChangeLogsScanPackage("com.kinsey.mongodemo.shell"); //扫描changesets的类
+        mongobee.setMongoTemplate(mongoTemplate);
+        return mongobee;
+    }
+}
+```
+数据具体迁移实现
+在迁移的class上必须加上`@ChangeLog`注解，每个方法上就是我们具体迁移的实现
+`@ChangeLog` 参数 order表示 多个changelog的时候执行顺序
+`@ChangeSet`注解作用在每个方法上，参数有
+ - order 每个方法的执行顺序，可以是字符串，数字，时间
+ - id change set的名称，必须唯一
+ - author 更改人
+ - runAlways 可选 默认false 表示是否可以始终运行，就是每次启动都会去运行
+mongobee 提供了如下的方式
+``` java
+@ChangeSet(order = "001", id = "someChangeWithoutArgs", author = "testAuthor")
+public void someChange1() {
+   // method without arguments can do some non-db changes
+}
+
+@ChangeSet(order = "002", id = "someChangeWithMongoDatabase", author = "testAuthor")
+public void someChange2(MongoDatabase db) {
+  // type: com.mongodb.client.MongoDatabase : original MongoDB driver v. 3.x, operations allowed by driver are possible
+  // example: 
+  MongoCollection<Document> mycollection = db.getCollection("mycollection");
+  Document doc = new Document("testName", "example").append("test", "1");
+  mycollection.insertOne(doc);
+}
+
+@ChangeSet(order = "003", id = "someChangeWithDb", author = "testAuthor")
+public void someChange3(DB db) {
+  // This is deprecated in mongo-java-driver 3.x, use MongoDatabase instead
+  // type: com.mongodb.DB : original MongoDB driver v. 2.x, operations allowed by driver are possible
+  // example: 
+  DBCollection mycollection = db.getCollection("mycollection");
+  BasicDBObject doc = new BasicDBObject().append("test", "1");
+  mycollection .insert(doc);
+}
+
+@ChangeSet(order = "004", id = "someChangeWithJongo", author = "testAuthor")
+public void someChange4(Jongo jongo) {
+  // type: org.jongo.Jongo : Jongo driver can be used, used for simpler notation
+  // example:
+  MongoCollection mycollection = jongo.getCollection("mycollection");
+  mycollection.insert("{test : 1}");
+}
+
+@ChangeSet(order = "005", id = "someChangeWithSpringDataTemplate", author = "testAuthor")
+public void someChange5(MongoTemplate mongoTemplate) {
+  // type: org.springframework.data.mongodb.core.MongoTemplate
+  // Spring Data integration allows using MongoTemplate in the ChangeSet
+  // example:
+  mongoTemplate.save(myEntity);
+}
+
+@ChangeSet(order = "006", id = "someChangeWithSpringDataTemplate", author = "testAuthor")
+public void someChange5(MongoTemplate mongoTemplate, Environment environment) {
+  // type: org.springframework.data.mongodb.core.MongoTemplate
+  // type: org.springframework.core.env.Environment
+  // Spring Data integration allows using MongoTemplate and Environment in the ChangeSet
+}
+```
+
+在它提供的方法中 我个人认为还是采用`MongoTemplate`来进行编写更加方便，因为在我们平常使用的Spring data mongodb 也是在`MongoTemplate`
+上做了一层封装。例如下面`someChange1`方法中我们在user的一条记录增加一个action字段，在`someChange2`删除action字段
+``` java
+@com.github.mongobee.changeset.ChangeLog
+public class ChangeLog {
+
+    @ChangeSet(order = "001", id = "addActionAndUpdate", author = "testAuthor")
+    public void someChange1(MongoTemplate mongoTemplate) {
+        User user = mongoTemplate.findById("5b7cd8c70cf6500a0d4545d8", User.class);
+        user.setName("kinsey-test");
+        user.setAction("IN");
+        mongoTemplate.save(user);
+    }
+
+
+    @ChangeSet(order = "002", id = "removeAction", author = "testAuthor")
+    public void someChange2(MongoTemplate mongoTemplate) {
+        User user = mongoTemplate.findById("5b7cd8c70cf6500a0d4545d8", User.class);
+        user.setName("kinsey-1");
+        user.setAction(null);
+        mongoTemplate.save(user);
+    }
+
+}
+``` 
 
 ### MongoDB索引
 #### Spring Data MongoDB 创建索引

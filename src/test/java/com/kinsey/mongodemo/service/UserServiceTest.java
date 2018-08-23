@@ -28,9 +28,8 @@ public class UserServiceTest {
 
     /**
      * 内嵌 225114ms 229159ms 233977ms
-     * <p>
      * DBRef 631095ms 648557ms
-     *
+     * MySQL 940519ms 952588ms
      * @throws Exception
      */
     @Test
@@ -45,10 +44,10 @@ public class UserServiceTest {
             user.setTel("1273824");
             user.setSource(88 + i % 10);
             Address address = new Address();
-            address.setArea("滨江");
-            address.setCity("杭州");
-            address.setDetailAddress("科技大厦");
-            address.setProvince("浙江");
+            address.setArea("AAA");
+            address.setCity("BBB");
+            address.setDetailAddress("CCC");
+            address.setProvince("DD");
             user.setAddress(address);
             list.add(user);
         }
@@ -58,22 +57,21 @@ public class UserServiceTest {
 
     /**
      * 内嵌 18528ms 19874ms 18891ms
-     * DBRef 410950ms
-     *
+     * DBRef 410950ms 412671ms
+     * MySQL 465746ms 492935ms 476925ms
      * @throws Exception
      */
     @Test
     public void testQueryAll1() throws Exception {
         Instant s = Instant.now();
-        PageRequest pageRequest = PageRequest.of(0, 100);
-        userRepository.findAll(pageRequest);
+        userRepository.findAll();
         System.out.println(Duration.between(s, Instant.now()).toMillis());
     }
 
     /**
      * 内嵌 108ms 107ms 102ms
      * DBRef 252ms 240ms 257ms
-     *
+     * MySQL 479ms 493ms 541ms
      * @throws Exception
      */
     @Test
@@ -87,13 +85,13 @@ public class UserServiceTest {
     /**
      * 内嵌 64ms 59ms 60ms
      * DBRef 70ms 62ms 71ms
-     *
+     * MySQL 71ms 64ms 68ms
      * @throws Exception
      */
     @Test
     public void testQueryOne1() throws Exception {
         Instant s = Instant.now();
-        userRepository.findById("5b74456daa071703b49fa045");
+        userRepository.findById("5b76691daa07172c3909c6d6");
         System.out.println(Duration.between(s, Instant.now()).toMillis());
     }
 
