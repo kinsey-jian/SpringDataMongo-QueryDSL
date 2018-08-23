@@ -27,8 +27,8 @@ public class UserServiceTest {
     private UserRepository userRepository;
 
     /**
-     * 内嵌 225114ms 229159ms 233977ms
-     * DBRef 631095ms 648557ms
+     * 内嵌 224727ms 229159ms 222713ms
+     * DBRef 631095ms 648557ms 673470ms
      * MySQL 940519ms 952588ms
      * @throws Exception
      */
@@ -56,8 +56,8 @@ public class UserServiceTest {
     }
 
     /**
-     * 内嵌 18528ms 19874ms 18891ms
-     * DBRef 410950ms 412671ms
+     * 内嵌 18528ms 18694ms 18945ms
+     * DBRef 410950ms 412671ms 417126ms
      * MySQL 465746ms 492935ms 476925ms
      * @throws Exception
      */
@@ -69,8 +69,8 @@ public class UserServiceTest {
     }
 
     /**
-     * 内嵌 108ms 107ms 102ms
-     * DBRef 252ms 240ms 257ms
+     * 内嵌 82ms 85ms 80ms
+     * DBRef 202ms 211ms 213ms
      * MySQL 479ms 493ms 541ms
      * @throws Exception
      */
@@ -83,21 +83,21 @@ public class UserServiceTest {
     }
 
     /**
-     * 内嵌 64ms 59ms 60ms
-     * DBRef 70ms 62ms 71ms
+     * 内嵌 43ms 42ms 43ms
+     * DBRef 49ms 45ms 47ms
      * MySQL 71ms 64ms 68ms
      * @throws Exception
      */
     @Test
     public void testQueryOne1() throws Exception {
         Instant s = Instant.now();
-        userRepository.findById("5b76691daa07172c3909c6d6");
+        userRepository.findById("5b7ec1bd3f17d504599d80a3");
         System.out.println(Duration.between(s, Instant.now()).toMillis());
     }
 
     @Test
     public void testDelete() throws Exception {
-        userRepository.deleteById("5b76691daa07172c3909c6d6");
+        userRepository.deleteById("5b7eb0b83f17d50292c21c0a");
     }
 
 
