@@ -5,6 +5,9 @@ import com.kinsey.mongodemo.entity.QAddress;
 import com.kinsey.mongodemo.entity.QUser;
 import com.kinsey.mongodemo.entity.User;
 import com.kinsey.mongodemo.entity.repository.UserRepository;
+import org.databene.contiperf.PerfTest;
+import org.databene.contiperf.junit.ContiPerfRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +29,8 @@ public class UserServiceTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Rule
+    public ContiPerfRule i = new ContiPerfRule();
     /**
      * 内嵌 224727ms 229159ms 222713ms
      * DBRef 631095ms 648557ms 673470ms
@@ -62,6 +67,7 @@ public class UserServiceTest {
      * @throws Exception
      */
     @Test
+    @PerfTest(threads = 20, invocations = 20)
     public void testQueryAll1() throws Exception {
         Instant s = Instant.now();
         userRepository.findAll();
@@ -75,6 +81,7 @@ public class UserServiceTest {
      * @throws Exception
      */
     @Test
+    @PerfTest(threads = 200, invocations = 200)
     public void testQueryPage() throws Exception {
         Instant s = Instant.now();
         PageRequest pageRequest = PageRequest.of(0, 100);
@@ -89,6 +96,7 @@ public class UserServiceTest {
      * @throws Exception
      */
     @Test
+    @PerfTest(threads = 200,duration = 10000,rampUp = 10, warmUp = 9000)
     public void testQueryOne1() throws Exception {
         Instant s = Instant.now();
         userRepository.findById("5b7ec1bd3f17d504599d80a3");
