@@ -60,18 +60,7 @@ public class UserService {
      * 根据年龄分组
      */
     public void queryGroupByAge() {
-        //条件
-        MatchOperation matchOperation = Aggregation.match(Criteria.where("createDate").gte(LocalDateTime.of(2018, 8, 1, 0, 0)).lte(LocalDateTime.now()));
-        //排序
-        SortOperation sortOperation = Aggregation.sort(Sort.Direction.DESC, "age");
-        //分组
-        GroupOperation groupOperation = Aggregation.group("age").count().as("count").first("age").as("age").first("createDate").as("createDate");
-        //接收字段
-        ProjectionOperation projectionOperation = project("age", "count", "createDate");
-
-        Aggregation aggregation = Aggregation.newAggregation(matchOperation, groupOperation, projectionOperation, sortOperation);
-        List<StatisticsModel> results = mongoTemplate.aggregate(aggregation, User.class, StatisticsModel.class).getMappedResults();
-        System.out.println(results);
+        userRepository.queryGroupByAge();
     }
 
     /**

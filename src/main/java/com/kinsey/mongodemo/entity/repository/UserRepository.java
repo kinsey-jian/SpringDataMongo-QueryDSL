@@ -11,7 +11,7 @@ import java.util.List;
  * Created by zj on 2018/8/6
  */
 @Repository
-public interface UserRepository extends MongoRepository<User, String>, QuerydslPredicateExecutor<User> {
+public interface UserRepository extends MongoRepository<User, String>, UserRepositoryCustom, QuerydslPredicateExecutor<User> {
     List<User> findByAgeBetween(int s, int e);
 
     long countByAge(int age);

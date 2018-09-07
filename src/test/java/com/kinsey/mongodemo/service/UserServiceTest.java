@@ -124,9 +124,10 @@ public class UserServiceTest {
 
     @Test
     public void testQuery() {
-        Instant s = Instant.now();
+        /*Instant s = Instant.now();
         List<User> users = userRepository.findByAddress_DetailAddress("科技大厦");
-        System.out.println(Duration.between(s, Instant.now()).toMillis());
+        System.out.println(Duration.between(s, Instant.now()).toMillis());*/
+        userRepository.queryGroupByAge();
     }
 
     @Test
