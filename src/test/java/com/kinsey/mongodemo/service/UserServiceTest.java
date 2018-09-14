@@ -41,7 +41,7 @@ public class UserServiceTest {
     public void testSave1() throws Exception {
         Instant s = Instant.now();
         List<User> list = new ArrayList<>();
-        for (int i = 0; i < 1000000; i++) {
+        for (int i = 0; i < 10; i++) {
             User user = new User();
             user.setAge(10 + i % 10);
             user.setEmail("888888@ku.com");
@@ -70,7 +70,7 @@ public class UserServiceTest {
     @PerfTest(threads = 20, invocations = 20)
     public void testQueryAll1() throws Exception {
         Instant s = Instant.now();
-        userRepository.findAll();
+        List<User> all = userRepository.findAll();
         System.out.println(Duration.between(s, Instant.now()).toMillis());
     }
 
@@ -105,7 +105,7 @@ public class UserServiceTest {
 
     @Test
     public void testDelete() throws Exception {
-        userRepository.deleteById("5b7eb0b83f17d50292c21c0a");
+        userRepository.deleteAll();
     }
 
 

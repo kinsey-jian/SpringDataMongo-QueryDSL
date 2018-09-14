@@ -57,10 +57,10 @@ public class User implements Serializable {
     private LocalDateTime lastModifiedDate;
 
     @CreatedBy
-    private String createdUser;
+    private UserVO createdUser;
 
     @LastModifiedBy
-    private String lastModifiedUser;
+    private UserVO lastModifiedUser;
 
     private List<String> action;
 }
